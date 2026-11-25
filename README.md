@@ -119,3 +119,21 @@ docs/schema.yml    contrato OpenAPI generado (no se edita a mano)
 
 Los usos de IA para resolver errores de CORS, CSRF y documentación están marcados en el código
 con el formato `# IA: [problema] → Solución manual: [explicación técnica]`.
+
+## Capturas
+
+| API raíz | Recurso con enlaces HATEOAS |
+|---|---|
+| ![API raíz](docs/capturas/Fig11_paso3_api_root.png) | ![Producto](docs/capturas/Fig07_paso2_browsable_hateoas.png) |
+
+| Filtros y paginación | Swagger UI |
+|---|---|
+| ![Paginación](docs/capturas/Fig13_paso4_browsable_paginado.png) | ![Swagger](docs/capturas/Fig17_paso5_swagger_docs.png) |
+
+| Cliente CORS/CSRF | Postman |
+|---|---|
+| ![Cliente](docs/capturas/Fig18_paso5_cliente_cors.png) | ![Postman](docs/capturas/Fig19_paso5_postman_200.png) |
+
+Pruebas automáticas: 43 tests en verde.
+
+![Tests](docs/capturas/Fig20_verificacion_final.png)
