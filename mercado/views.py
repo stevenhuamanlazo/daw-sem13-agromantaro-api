@@ -11,6 +11,7 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import APIException
 from rest_framework.permissions import IsAdminUser, IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 
 from .filters import PedidoFilter, ProductoFilter
 from .models import Categoria, ConflictoDeEstado, Pedido, Producto, Productor, Resena
@@ -82,6 +83,14 @@ class ProductoViewSet(viewsets.ModelViewSet):
     search_fields = ["nombre", "descripcion", "productor__nombre", "categoria__nombre"]
     ordering_fields = ["precio", "creado", "nombre", "stock", "fecha_cosecha", "calificacion_promedio"]
     ordering = ["-creado", "id"]
+
+    def get_throttles(self):
+        # Además de anon/user globales, publicar reseñas tiene un límite propio.
+        throttles = super().get_throttles()
+        if self.action == "resenas" and self.request.method == "POST":
+            self.throttle_scope = "resenas"
+            throttles.append(ScopedRateThrottle())
+        return throttles
 
     def get_queryset(self):
         # select_related evita N+1; las anotaciones evitan contar/promediar en Python.
@@ -179,6 +188,14 @@ class PedidoViewSet(
     search_fields = ["ciudad", "items__producto__nombre"]
     ordering_fields = ["creado", "total"]
     ordering = ["-creado"]
+
+    def get_throttles(self):
+        # Las operaciones que mutan pedidos comparten un cupo estricto por usuario.
+        throttles = super().get_throttles()
+        if self.action in ("create", "pagar", "cancelar"):
+            self.throttle_scope = "pedidos"
+            throttles.append(ScopedRateThrottle())
+        return throttles
 
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):   # generación de esquema OpenAPI

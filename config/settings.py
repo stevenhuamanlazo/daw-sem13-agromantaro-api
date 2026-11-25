@@ -123,8 +123,10 @@ REST_FRAMEWORK = {
         "rest_framework.throttling.UserRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {
-        "anon": "20/min",
-        "user": "120/min",
+        "anon": "20/min",      # lectura anónima (anti-scraping)
+        "user": "120/min",     # usuarios autenticados
+        "pedidos": "10/min",   # scope: crear/pagar/cancelar pedidos
+        "resenas": "5/min",    # scope: publicar reseñas (anti-spam)
     },
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
