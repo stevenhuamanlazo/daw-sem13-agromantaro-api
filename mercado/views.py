@@ -14,6 +14,7 @@ from rest_framework.response import Response
 
 from .filters import PedidoFilter, ProductoFilter
 from .models import Categoria, ConflictoDeEstado, Pedido, Producto, Productor, Resena
+from .pagination import PaginacionResenas
 from .permissions import AutorOStaff, ProductorDuenoOStaff, SoloLecturaOStaff
 from .serializers import (
     CategoriaSerializer,
@@ -101,6 +102,7 @@ class ProductoViewSet(viewsets.ModelViewSet):
     @action(
         detail=True, methods=["get", "post"], url_path="resenas", url_name="resenas",
         permission_classes=[IsAuthenticatedOrReadOnly], filter_backends=[],
+        pagination_class=PaginacionResenas,
     )
     def resenas(self, request, slug=None):
         """GET lista las reseñas del producto; POST crea una (solo si recibiste el producto)."""
@@ -160,6 +162,7 @@ class ResenaViewSet(
     filterset_fields = {"puntuacion": ["exact", "gte", "lte"], "producto__slug": ["exact"]}
     ordering_fields = ["creado", "puntuacion"]
     ordering = ["-creado"]
+    pagination_class = PaginacionResenas
 
 
 # --------------------------------------------------------------------------

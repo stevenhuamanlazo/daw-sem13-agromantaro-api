@@ -109,9 +109,8 @@ REST_FRAMEWORK = {
         "rest_framework.renderers.JSONRenderer",
         "rest_framework.renderers.BrowsableAPIRenderer",
     ],
-    # Paginación por defecto (se reemplaza por una clase propia en la etapa 4).
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
-    "PAGE_SIZE": 10,
+    # Paginación global propia: evita MemoryError en colecciones grandes.
+    "DEFAULT_PAGINATION_CLASS": "mercado.pagination.PaginacionEstandar",
     # Filtrado / búsqueda / orden delegados a la base de datos (QuerySets lazy).
     "DEFAULT_FILTER_BACKENDS": [
         "django_filters.rest_framework.DjangoFilterBackend",
