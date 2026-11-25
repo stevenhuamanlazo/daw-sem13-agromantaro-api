@@ -12,6 +12,7 @@ from rest_framework.exceptions import APIException
 from rest_framework.permissions import IsAdminUser, IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 
+from .filters import PedidoFilter, ProductoFilter
 from .models import Categoria, ConflictoDeEstado, Pedido, Producto, Productor, Resena
 from .permissions import AutorOStaff, ProductorDuenoOStaff, SoloLecturaOStaff
 from .serializers import (
@@ -41,6 +42,7 @@ class ProductorViewSet(viewsets.ModelViewSet):
 
     serializer_class = ProductorSerializer
     permission_classes = [SoloLecturaOStaff]   # endurece el default global (justificado)
+    filterset_fields = ["region", "certificacion"]
     lookup_field = "slug"
     lookup_value_regex = r"[-\w]+"
     search_fields = ["nombre", "distrito"]
@@ -73,6 +75,7 @@ class ProductoViewSet(viewsets.ModelViewSet):
 
     serializer_class = ProductoSerializer
     permission_classes = [ProductorDuenoOStaff]
+    filterset_class = ProductoFilter
     lookup_field = "slug"
     lookup_value_regex = r"[-\w]+"
     search_fields = ["nombre", "descripcion", "productor__nombre", "categoria__nombre"]
@@ -169,6 +172,7 @@ class PedidoViewSet(
 
     serializer_class = PedidoSerializer
     permission_classes = [IsAuthenticated]   # los pedidos nunca son públicos
+    filterset_class = PedidoFilter
     search_fields = ["ciudad", "items__producto__nombre"]
     ordering_fields = ["creado", "total"]
     ordering = ["-creado"]
