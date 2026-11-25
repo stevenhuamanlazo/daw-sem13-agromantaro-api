@@ -26,3 +26,24 @@ class ProductoAdmin(admin.ModelAdmin):
 @admin.register(Resena)
 class ResenaAdmin(admin.ModelAdmin):
     list_display = ("producto", "autor", "puntuacion", "creado")
+
+
+from .models import Cupon, ItemPedido, Pedido  # noqa: E402
+
+
+class ItemPedidoInline(admin.TabularInline):
+    model = ItemPedido
+    extra = 0
+    readonly_fields = ("precio_unitario",)
+
+
+@admin.register(Pedido)
+class PedidoAdmin(admin.ModelAdmin):
+    list_display = ("codigo", "cliente", "estado", "total", "creado")
+    list_filter = ("estado",)
+    inlines = [ItemPedidoInline]
+
+
+@admin.register(Cupon)
+class CuponAdmin(admin.ModelAdmin):
+    list_display = ("codigo", "porcentaje", "vigente_hasta", "usos_actuales", "usos_maximos", "activo")
