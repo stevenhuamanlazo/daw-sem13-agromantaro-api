@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>AgroMantaro – Cliente demo (CORS + CSRF)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { --verde:#2f5d3a; --crema:#f6f1e7; --tierra:#8a5a2b; --ok:#1f7a3d; --error:#b3261e; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:15px/1.5 "Segoe UI", system-ui, sans-serif; background:var(--crema); color:#25301f; }
+  header { background:var(--verde); color:#fff; padding:18px 28px; }
+  header h1 { margin:0; font-size:20px; letter-spacing:.3px; }
+  header p { margin:4px 0 0; opacity:.85; font-size:13px; }
+  main { display:grid; grid-template-columns: 340px 1fr; gap:20px; padding:22px 28px; }
+  .panel { background:#fff; border:1px solid #dcd3bf; border-radius:10px; padding:16px; }
+  .panel h2 { margin:0 0 10px; font-size:14px; text-transform:uppercase; letter-spacing:.8px; color:var(--tierra); }
+  button { display:block; width:100%; margin:6px 0; padding:9px 12px; border:0; border-radius:7px;
+           background:var(--verde); color:#fff; font-size:14px; cursor:pointer; text-align:left; }
+  button.peligro { background:var(--error); }
+  button:hover { filter:brightness(1.12); }
+  label { font-size:12px; color:#5b6650; display:block; margin-top:8px; }
+  input { width:100%; padding:7px 9px; border:1px solid #cbbf9f; border-radius:6px; font-size:14px; }
+  #estado { font-size:12px; margin-top:10px; padding:8px; background:#eef3e8; border-radius:6px; word-break:break-all; }
+  #log { height:560px; overflow:auto; background:#16201a; color:#d9e7d3; border-radius:8px; padding:12px;
+         font:12.5px/1.45 Consolas, "DejaVu Sans Mono", monospace; white-space:pre-wrap; }
+  .ok { color:#7ee08f; } .err { color:#ff8a80; } .meta { color:#e7c97a; }
+  small { color:#6d7761; }
+</style>
+</head>
+<body>
+<header>
+  <h1>AgroMantaro Market – Cliente SPA de demostración</h1>
+  <p>Origen del cliente: <b id="origen"></b> &nbsp;→&nbsp; API: <b id="apiurl"></b></p>
+</header>
+<main>
+  <section class="panel">
+    <h2>1 · CORS (lectura)</h2>
+    <button id="b-prod">GET /api/productos/ (orgánicos &lt; S/ 10)</button>
+    <h2 style="margin-top:16px">2 · CSRF + sesión</h2>
+    <button id="b-csrf">GET /api/csrf/ (obtener token)</button>
+    <label>Usuario</label><input id="u" value="lucia">
+    <label>Contraseña</label><input id="p" type="password" value="Cliente123!">
+    <button id="b-login">POST /api/sesion/ (login con X-CSRFToken)</button>
+    <h2 style="margin-top:16px">3 · Escritura autenticada</h2>
+    <button id="b-ped-ok">POST /api/pedidos/ con token</button>
+    <button id="b-ped-no" class="peligro">POST /api/pedidos/ SIN token (esperado 403)</button>
+    <div id="estado">Token CSRF: <i>(aún no solicitado)</i></div>
+    <p><small>Sirve esta carpeta con <code>python -m http.server 5173</code> y levanta la API en el puerto 8000.</small></p>
+  </section>
+  <section class="panel"><h2>Registro de peticiones</h2><div id="log"></div></section>
+</main>
+<script>
+const API = "http://localhost:8000";
+let csrf = null;
+const $ = (id) => document.getElementById(id);
+$("origen").textContent = location.origin; $("apiurl").textContent = API;
+
+function log(texto, clase = "") {
+  const s = document.createElement("span"); s.className = clase; s.textContent = texto + "\n";
+  $("log").appendChild(s); $("log").scrollTop = $("log").scrollHeight;
+}
+async function llamar(metodo, ruta, cuerpo, conToken = true) {
+  const cab = { "Content-Type": "application/json" };
+  if (conToken && csrf && metodo !== "GET") cab["X-CSRFToken"] = csrf;
+  log(`→ ${metodo} ${ruta}` + (conToken || metodo === "GET" ? "" : "   (sin X-CSRFToken)"), "meta");
+  try {
+    const r = await fetch(API + ruta, {
+      method: metodo, headers: cab, credentials: "include",   // envía/recibe la cookie de sesión
+      body: cuerpo ? JSON.stringify(cuerpo) : undefined,
+    });
+    const txt = await r.text(); let data; try { data = JSON.parse(txt); } catch { data = txt; }
+    log(`← ${r.status} ${r.statusText}`, r.ok ? "ok" : "err");
+    return { r, data };
+  } catch (e) {
+    log("✖ Bloqueado por CORS o red: " + e.message, "err");
+  }
+}
+async function obtenerToken() {
+  const x = await llamar("GET", "/api/csrf/");
+  if (x && x.r.ok) { csrf = x.data.csrfToken; $("estado").innerHTML = "Token CSRF: <b>" + csrf.slice(0, 16) + "…</b>"; log(`  csrfToken = ${csrf.slice(0,16)}…`); }
+}
+$("b-prod").onclick = async () => {
+  const x = await llamar("GET", "/api/productos/?estado=activo&es_organico=true&precio_max=10&ordering=precio&page_size=5");
+  if (x && x.r.ok) { log(`  count=${x.data.count}, página ${x.data.pagina_actual}/${x.data.total_paginas}`);
+    x.data.results.forEach(p => log(`  • ${p.nombre.padEnd(34)} S/ ${p.precio}  (${p.productor_nombre})`)); }
+};
+$("b-csrf").onclick = obtenerToken;
+$("b-login").onclick = async () => {
+  if (!csrf) await obtenerToken();
+  const x = await llamar("POST", "/api/sesion/", { username: $("u").value, password: $("p").value });
+  if (x && x.r.ok) { log("  " + JSON.stringify(x.data)); await obtenerToken(); }   // el login rota el token
+  else if (x) log("  " + JSON.stringify(x.data), "err");
+};
+const pedido = { direccion_envio: "Jr. Real 450", ciudad: "Huancayo",
+  items: [{ producto: API + "/api/productos/olluco-rosado/", cantidad: 2 }] };
+$("b-ped-ok").onclick = async () => {
+  const x = await llamar("POST", "/api/pedidos/", pedido, true);
+  if (x) log("  " + (x.r.ok ? `pedido ${x.data.codigo} · total S/ ${x.data.total} · estado ${x.data.estado}` : JSON.stringify(x.data)), x.r.ok ? "ok" : "err");
+};
+$("b-ped-no").onclick = async () => {
+  const x = await llamar("POST", "/api/pedidos/", pedido, false);
+  if (x) log("  " + JSON.stringify(x.data), "err");
+};
+</script>
+</body>
+</html>
