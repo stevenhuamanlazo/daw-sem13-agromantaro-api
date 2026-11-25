@@ -1,4 +1,4 @@
-"""CORS y CSRF (Guía, Paso 5)."""
+"""CORS, CSRF y documentación OpenAPI (Guía, Paso 5)."""
 from rest_framework.test import APIClient
 
 from .tests import BaseAPITest
@@ -70,3 +70,19 @@ class CsrfTests(BaseAPITest):
 
     def test_lecturas_publicas_no_requieren_csrf(self):
         self.assertEqual(self.spa.get("/api/productos/").status_code, 200)
+
+
+class DocumentacionTests(BaseAPITest):
+    def test_esquema_openapi_3_con_rutas_clave(self):
+        r = self.client.get("/api/schema/?format=json")
+        self.assertEqual(r.status_code, 200)
+        esquema = r.json()
+        self.assertTrue(esquema["openapi"].startswith("3."))
+        for ruta in ("/api/productos/", "/api/productos/{slug}/resenas/", "/api/pedidos/{id}/pagar/", "/api/csrf/"):
+            self.assertIn(ruta, esquema["paths"])
+
+    def test_swagger_y_redoc_se_sirven_localmente(self):
+        for url in ("/api/docs/", "/api/redoc/"):
+            r = self.client.get(url)
+            self.assertEqual(r.status_code, 200)
+            self.assertNotIn(b"cdn.jsdelivr.net", r.content)

@@ -149,6 +149,9 @@ CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS          # el SPA puede enviar POST 
 CSRF_COOKIE_HTTPONLY = False                         # el JS del SPA debe poder leer el token
 CSRF_COOKIE_SAMESITE = "Lax"
 CSRF_FAILURE_VIEW = "mercado.seguridad.csrf_fallo"   # 403 en JSON en vez de HTML
+# IA: el preflight OPTIONS del SPA fallaba ("Request header field x-csrftoken is not allowed")
+# → Solución manual: el navegador solo envía X-CSRFToken si la respuesta del preflight lo
+# lista en Access-Control-Allow-Headers; se declara explícitamente en CORS_ALLOW_HEADERS.
 CORS_ALLOW_HEADERS = (
     "accept", "authorization", "content-type", "origin", "user-agent",
     "x-csrftoken", "x-requested-with",
@@ -157,6 +160,9 @@ CORS_ALLOW_HEADERS = (
 # --------------------------------------------------------------------------
 # OpenAPI / Swagger (drf-spectacular)
 # --------------------------------------------------------------------------
+# IA: /api/docs/ cargaba en blanco sin internet (assets de Swagger UI en CDN bloqueado)
+# → Solución manual: drf-spectacular-sidecar en INSTALLED_APPS y *_DIST = "SIDECAR" para
+# servir swagger-ui y redoc desde archivos estáticos locales.
 SPECTACULAR_SETTINGS = {
     "TITLE": "AgroMantaro Market API",
     "DESCRIPTION": (

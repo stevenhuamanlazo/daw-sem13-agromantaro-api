@@ -1,0 +1,1925 @@
+openapi: 3.0.3
+info:
+  title: AgroMantaro Market API
+  version: 1.0.0
+  description: 'Marketplace agroecológico del Valle del Mantaro: productores, catálogo
+    por lotes, pedidos con cupones y reseñas verificadas.'
+paths:
+  /api/categorias/:
+    get:
+      operationId: categorias_list
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Qué campo usar para ordenar los resultados.
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: Un término de búsqueda.
+        schema:
+          type: string
+      tags:
+      - categorias
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Categoria'
+          description: ''
+    post:
+      operationId: categorias_create
+      tags:
+      - categorias
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoriaRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CategoriaRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CategoriaRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Categoria'
+          description: ''
+  /api/categorias/{slug}/:
+    get:
+      operationId: categorias_retrieve
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-\w]+$
+        required: true
+      tags:
+      - categorias
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Categoria'
+          description: ''
+    put:
+      operationId: categorias_update
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-\w]+$
+        required: true
+      tags:
+      - categorias
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoriaRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CategoriaRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CategoriaRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Categoria'
+          description: ''
+    patch:
+      operationId: categorias_partial_update
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-\w]+$
+        required: true
+      tags:
+      - categorias
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCategoriaRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedCategoriaRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedCategoriaRequest'
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Categoria'
+          description: ''
+    delete:
+      operationId: categorias_destroy
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-\w]+$
+        required: true
+      tags:
+      - categorias
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/csrf/:
+    get:
+      operationId: csrf_retrieve
+      description: Entrega el token CSRF y garantiza que la cookie 'csrftoken' esté
+        presente.
+      summary: Obtener token CSRF
+      tags:
+      - csrf
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CsrfToken'
+          description: ''
+  /api/pedidos/:
+    get:
+      operationId: pedidos_list
+      description: Pedidos del cliente autenticado (el personal ve todos).
+      parameters:
+      - in: query
+        name: ciudad
+        schema:
+          type: string
+      - in: query
+        name: con_cupon
+        schema:
+          type: boolean
+      - in: query
+        name: desde
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: estado
+        schema:
+          type: string
+          enum:
+          - cancelado
+          - entregado
+          - enviado
+          - pagado
+          - pendiente
+        description: |-
+          * `pendiente` - Pendiente de pago
+          * `pagado` - Pagado
+          * `enviado` - Enviado
+          * `entregado` - Entregado
+          * `cancelado` - Cancelado
+      - in: query
+        name: hasta
+        schema:
+          type: string
+          format: date
+      - name: ordering
+        required: false
+        in: query
+        description: Qué campo usar para ordenar los resultados.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: Un número de página dentro del conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Número de resultados a devolver por página.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: Un término de búsqueda.
+        schema:
+          type: string
+      - in: query
+        name: total_min
+        schema:
+          type: number
+      tags:
+      - pedidos
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPedidoList'
+          description: ''
+    post:
+      operationId: pedidos_create
+      description: Pedidos del cliente autenticado (el personal ve todos).
+      tags:
+      - pedidos
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PedidoRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PedidoRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PedidoRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pedido'
+          description: ''
+  /api/pedidos/{id}/:
+    get:
+      operationId: pedidos_retrieve
+      description: Pedidos del cliente autenticado (el personal ve todos).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este pedido.
+        required: true
+      tags:
+      - pedidos
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pedido'
+          description: ''
+  /api/pedidos/{id}/avanzar/:
+    post:
+      operationId: pedidos_avanzar_create
+      description: (Staff) pagado → enviado → entregado.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este pedido.
+        required: true
+      tags:
+      - pedidos
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pedido'
+          description: ''
+        '409':
+          description: Estado inválido
+  /api/pedidos/{id}/cancelar/:
+    post:
+      operationId: pedidos_cancelar_create
+      description: Cancela un pedido pendiente/pagado y devuelve el stock reservado.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este pedido.
+        required: true
+      tags:
+      - pedidos
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pedido'
+          description: ''
+        '409':
+          description: Estado inválido
+  /api/pedidos/{id}/pagar/:
+    post:
+      operationId: pedidos_pagar_create
+      description: Registra el pago (simulado) de un pedido pendiente.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este pedido.
+        required: true
+      tags:
+      - pedidos
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pedido'
+          description: ''
+        '409':
+          description: Estado inválido
+  /api/pedidos/validar-cupon/:
+    post:
+      operationId: pedidos_validar_cupon_create
+      description: Previsualiza el descuento de un cupón sin crear el pedido.
+      tags:
+      - pedidos
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidarCuponRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ValidarCuponRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ValidarCuponRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          description: Descuento calculado
+  /api/productores/:
+    get:
+      operationId: productores_list
+      description: Productores registrados. Lectura pública; alta/edición solo personal
+        administrativo.
+      parameters:
+      - in: query
+        name: certificacion
+        schema:
+          type: string
+          enum:
+          - comercio_justo
+          - ninguna
+          - org_senasa
+          - pgs
+        description: |-
+          * `ninguna` - Sin certificación
+          * `org_senasa` - Orgánico SENASA
+          * `pgs` - Sistema Participativo de Garantía
+          * `comercio_justo` - Comercio Justo
+      - name: ordering
+        required: false
+        in: query
+        description: Qué campo usar para ordenar los resultados.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: Un número de página dentro del conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Número de resultados a devolver por página.
+        schema:
+          type: integer
+      - in: query
+        name: region
+        schema:
+          type: string
+          enum:
+          - ayacucho
+          - huancavelica
+          - junin
+          - pasco
+        description: |-
+          * `junin` - Junín
+          * `huancavelica` - Huancavelica
+          * `pasco` - Pasco
+          * `ayacucho` - Ayacucho
+      - name: search
+        required: false
+        in: query
+        description: Un término de búsqueda.
+        schema:
+          type: string
+      tags:
+      - productores
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedProductorList'
+          description: ''
+    post:
+      operationId: productores_create
+      description: Productores registrados. Lectura pública; alta/edición solo personal
+        administrativo.
+      tags:
+      - productores
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductorRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProductorRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProductorRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Productor'
+          description: ''
+  /api/productores/{slug}/:
+    get:
+      operationId: productores_retrieve
+      description: Productores registrados. Lectura pública; alta/edición solo personal
+        administrativo.
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-\w]+$
+        required: true
+      tags:
+      - productores
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Productor'
+          description: ''
+    put:
+      operationId: productores_update
+      description: Productores registrados. Lectura pública; alta/edición solo personal
+        administrativo.
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-\w]+$
+        required: true
+      tags:
+      - productores
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductorRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProductorRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProductorRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Productor'
+          description: ''
+    patch:
+      operationId: productores_partial_update
+      description: Productores registrados. Lectura pública; alta/edición solo personal
+        administrativo.
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-\w]+$
+        required: true
+      tags:
+      - productores
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedProductorRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedProductorRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedProductorRequest'
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Productor'
+          description: ''
+    delete:
+      operationId: productores_destroy
+      description: Productores registrados. Lectura pública; alta/edición solo personal
+        administrativo.
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-\w]+$
+        required: true
+      tags:
+      - productores
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/productos/:
+    get:
+      operationId: productos_list
+      description: Catálogo de productos con calificación promedio calculada en base
+        de datos.
+      parameters:
+      - in: query
+        name: calificacion_min
+        schema:
+          type: number
+      - in: query
+        name: categoria
+        schema:
+          type: string
+        description: Slug exacto de la categoría.
+      - in: query
+        name: categoria_arbol
+        schema:
+          type: string
+        description: 'Slug de una categoría: incluye todas sus subcategorías.'
+      - in: query
+        name: cosechado_desde
+        schema:
+          type: string
+          format: date
+      - in: query
+        name: en_stock
+        schema:
+          type: boolean
+        description: true = activos con stock > 0.
+      - in: query
+        name: es_organico
+        schema:
+          type: boolean
+      - in: query
+        name: estado
+        schema:
+          type: string
+          enum:
+          - activo
+          - agotado
+          - borrador
+          - descontinuado
+        description: |-
+          * `borrador` - Borrador
+          * `activo` - Activo
+          * `agotado` - Agotado
+          * `descontinuado` - Descontinuado
+      - name: ordering
+        required: false
+        in: query
+        description: Qué campo usar para ordenar los resultados.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: Un número de página dentro del conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Número de resultados a devolver por página.
+        schema:
+          type: integer
+      - in: query
+        name: precio_max
+        schema:
+          type: number
+      - in: query
+        name: precio_min
+        schema:
+          type: number
+      - in: query
+        name: productor
+        schema:
+          type: string
+      - in: query
+        name: region
+        schema:
+          type: string
+          enum:
+          - ayacucho
+          - huancavelica
+          - junin
+          - pasco
+        description: |-
+          * `junin` - Junín
+          * `huancavelica` - Huancavelica
+          * `pasco` - Pasco
+          * `ayacucho` - Ayacucho
+      - name: search
+        required: false
+        in: query
+        description: Un término de búsqueda.
+        schema:
+          type: string
+      - in: query
+        name: unidad
+        schema:
+          type: string
+          enum:
+          - kg
+          - lt
+          - saco
+          - und
+        description: |-
+          * `kg` - Kilogramo
+          * `und` - Unidad
+          * `lt` - Litro
+          * `saco` - Saco de 50 kg
+      tags:
+      - productos
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedProductoList'
+          description: ''
+    post:
+      operationId: productos_create
+      description: Catálogo de productos con calificación promedio calculada en base
+        de datos.
+      tags:
+      - productos
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductoRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProductoRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProductoRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Producto'
+          description: ''
+  /api/productos/{slug}/:
+    get:
+      operationId: productos_retrieve
+      description: Catálogo de productos con calificación promedio calculada en base
+        de datos.
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-\w]+$
+        required: true
+      tags:
+      - productos
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Producto'
+          description: ''
+    put:
+      operationId: productos_update
+      description: Catálogo de productos con calificación promedio calculada en base
+        de datos.
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-\w]+$
+        required: true
+      tags:
+      - productos
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductoRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProductoRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProductoRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Producto'
+          description: ''
+    patch:
+      operationId: productos_partial_update
+      description: Catálogo de productos con calificación promedio calculada en base
+        de datos.
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-\w]+$
+        required: true
+      tags:
+      - productos
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedProductoRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedProductoRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedProductoRequest'
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Producto'
+          description: ''
+    delete:
+      operationId: productos_destroy
+      description: Catálogo de productos con calificación promedio calculada en base
+        de datos.
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-\w]+$
+        required: true
+      tags:
+      - productos
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/productos/{slug}/reponer-stock/:
+    post:
+      operationId: productos_reponer_stock_create
+      description: Suma unidades al stock; si estaba agotado vuelve a 'activo'.
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-\w]+$
+        required: true
+      tags:
+      - productos
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReponerStockRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReponerStockRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReponerStockRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Producto'
+          description: ''
+  /api/productos/{slug}/resenas/:
+    get:
+      operationId: productos_resenas_list
+      description: GET lista las reseñas del producto; POST crea una (solo si recibiste
+        el producto).
+      parameters:
+      - name: limit
+        required: false
+        in: query
+        description: Número de resultados a devolver por página.
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: El índice inicial a partir del cual devolver los resultados.
+        schema:
+          type: integer
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-\w]+$
+        required: true
+      tags:
+      - productos
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResenaList'
+          description: ''
+    post:
+      operationId: productos_resenas_create
+      description: GET lista las reseñas del producto; POST crea una (solo si recibiste
+        el producto).
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+          pattern: ^[-\w]+$
+        required: true
+      tags:
+      - productos
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResenaRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ResenaRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ResenaRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Resena'
+          description: ''
+  /api/productos/destacados/:
+    get:
+      operationId: productos_destacados_list
+      description: Top 5 activos con al menos 2 reseñas, ordenados por calificación.
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: Un número de página dentro del conjunto de resultados paginado.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Número de resultados a devolver por página.
+        schema:
+          type: integer
+      tags:
+      - productos
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedProductoList'
+          description: ''
+  /api/resenas/:
+    get:
+      operationId: resenas_list
+      description: Consulta y moderación de reseñas. La creación ocurre en /productos/{slug}/resenas/.
+      parameters:
+      - name: limit
+        required: false
+        in: query
+        description: Número de resultados a devolver por página.
+        schema:
+          type: integer
+      - name: offset
+        required: false
+        in: query
+        description: El índice inicial a partir del cual devolver los resultados.
+        schema:
+          type: integer
+      - name: ordering
+        required: false
+        in: query
+        description: Qué campo usar para ordenar los resultados.
+        schema:
+          type: string
+      - in: query
+        name: producto__slug
+        schema:
+          type: string
+      - in: query
+        name: puntuacion
+        schema:
+          type: integer
+      - in: query
+        name: puntuacion__gte
+        schema:
+          type: integer
+      - in: query
+        name: puntuacion__lte
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: Un término de búsqueda.
+        schema:
+          type: string
+      tags:
+      - resenas
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedResenaList'
+          description: ''
+  /api/resenas/{id}/:
+    get:
+      operationId: resenas_retrieve
+      description: Consulta y moderación de reseñas. La creación ocurre en /productos/{slug}/resenas/.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este resena.
+        required: true
+      tags:
+      - resenas
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Resena'
+          description: ''
+    delete:
+      operationId: resenas_destroy
+      description: Consulta y moderación de reseñas. La creación ocurre en /productos/{slug}/resenas/.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este resena.
+        required: true
+      tags:
+      - resenas
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/sesion/:
+    get:
+      operationId: sesion_retrieve
+      description: Sesión por cookie para SPAs (el resto de métodos exige CSRF vía
+        SessionAuthentication).
+      summary: Estado de la sesión
+      tags:
+      - sesion
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstadoSesion'
+          description: ''
+    post:
+      operationId: sesion_create
+      description: Sesión por cookie para SPAs (el resto de métodos exige CSRF vía
+        SessionAuthentication).
+      summary: Iniciar sesión
+      tags:
+      - sesion
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CredencialesRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CredencialesRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CredencialesRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: Sesión iniciada
+        '400':
+          description: Credenciales inválidas
+    delete:
+      operationId: sesion_destroy
+      description: Sesión por cookie para SPAs (el resto de métodos exige CSRF vía
+        SessionAuthentication).
+      summary: Cerrar sesión
+      tags:
+      - sesion
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '204':
+          description: No response body
+components:
+  schemas:
+    Categoria:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+          readOnly: true
+        id:
+          type: integer
+          readOnly: true
+        slug:
+          type: string
+          readOnly: true
+          pattern: ^[-a-zA-Z0-9_]+$
+        nombre:
+          type: string
+          maxLength: 80
+        padre:
+          type: string
+          format: uri
+          nullable: true
+        hijos:
+          type: array
+          items:
+            type: string
+            format: uri
+          readOnly: true
+        _links:
+          type: object
+          additionalProperties: {}
+          readOnly: true
+          title: ' links'
+      required:
+      - _links
+      - hijos
+      - id
+      - nombre
+      - slug
+      - url
+    CategoriaRequest:
+      type: object
+      properties:
+        nombre:
+          type: string
+          minLength: 1
+          maxLength: 80
+        padre:
+          type: string
+          format: uri
+          nullable: true
+      required:
+      - nombre
+    CertificacionEnum:
+      enum:
+      - ninguna
+      - org_senasa
+      - pgs
+      - comercio_justo
+      type: string
+      description: |-
+        * `ninguna` - Sin certificación
+        * `org_senasa` - Orgánico SENASA
+        * `pgs` - Sistema Participativo de Garantía
+        * `comercio_justo` - Comercio Justo
+    CredencialesRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - password
+      - username
+    CsrfToken:
+      type: object
+      properties:
+        csrfToken:
+          type: string
+      required:
+      - csrfToken
+    EstadoSesion:
+      type: object
+      properties:
+        autenticado:
+          type: boolean
+        usuario:
+          type: string
+          nullable: true
+      required:
+      - autenticado
+      - usuario
+    ItemPedido:
+      type: object
+      properties:
+        producto:
+          type: string
+          format: uri
+        producto_nombre:
+          type: string
+          readOnly: true
+        cantidad:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 1
+          format: int64
+        precio_unitario:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+          readOnly: true
+        subtotal:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,7}(?:\.\d{0,2})?$
+          readOnly: true
+      required:
+      - cantidad
+      - precio_unitario
+      - producto
+      - producto_nombre
+      - subtotal
+    ItemPedidoRequest:
+      type: object
+      properties:
+        producto:
+          type: string
+          format: uri
+        cantidad:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 1
+          format: int64
+      required:
+      - cantidad
+      - producto
+    PaginatedPedidoList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 41
+        total_paginas:
+          type: integer
+          example: 5
+        pagina_actual:
+          type: integer
+          example: 1
+        next:
+          type: string
+          nullable: true
+          format: uri
+        previous:
+          type: string
+          nullable: true
+          format: uri
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Pedido'
+    PaginatedProductoList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 41
+        total_paginas:
+          type: integer
+          example: 5
+        pagina_actual:
+          type: integer
+          example: 1
+        next:
+          type: string
+          nullable: true
+          format: uri
+        previous:
+          type: string
+          nullable: true
+          format: uri
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Producto'
+    PaginatedProductorList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 41
+        total_paginas:
+          type: integer
+          example: 5
+        pagina_actual:
+          type: integer
+          example: 1
+        next:
+          type: string
+          nullable: true
+          format: uri
+        previous:
+          type: string
+          nullable: true
+          format: uri
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Productor'
+    PaginatedResenaList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=400&limit=100
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?offset=200&limit=100
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Resena'
+    PatchedCategoriaRequest:
+      type: object
+      properties:
+        nombre:
+          type: string
+          minLength: 1
+          maxLength: 80
+        padre:
+          type: string
+          format: uri
+          nullable: true
+    PatchedProductoRequest:
+      type: object
+      properties:
+        nombre:
+          type: string
+          minLength: 1
+          maxLength: 140
+        descripcion:
+          type: string
+        precio:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+        unidad:
+          $ref: '#/components/schemas/UnidadEnum'
+        stock:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+        estado:
+          $ref: '#/components/schemas/ProductoEstadoEnum'
+        es_organico:
+          type: boolean
+        fecha_cosecha:
+          type: string
+          format: date
+          nullable: true
+        productor:
+          type: string
+          format: uri
+        categoria:
+          type: string
+          format: uri
+    PatchedProductorRequest:
+      type: object
+      properties:
+        nombre:
+          type: string
+          minLength: 1
+          maxLength: 120
+        region:
+          $ref: '#/components/schemas/RegionEnum'
+        distrito:
+          type: string
+          minLength: 1
+          maxLength: 80
+        certificacion:
+          $ref: '#/components/schemas/CertificacionEnum'
+        activo:
+          type: boolean
+    Pedido:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+          readOnly: true
+        id:
+          type: integer
+          readOnly: true
+        codigo:
+          type: string
+          readOnly: true
+        cliente:
+          type: string
+          title: Nombre de usuario
+          description: 'Requerido. 150 carácteres como máximo. Únicamente letras,
+            dígitos y @/./+/-/_ '
+          readOnly: true
+        estado:
+          allOf:
+          - $ref: '#/components/schemas/PedidoEstadoEnum'
+          readOnly: true
+        direccion_envio:
+          type: string
+          maxLength: 200
+        ciudad:
+          type: string
+          maxLength: 80
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ItemPedido'
+        cupon:
+          type: string
+          readOnly: true
+        subtotal:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,7}(?:\.\d{0,2})?$
+          readOnly: true
+        descuento:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,7}(?:\.\d{0,2})?$
+          readOnly: true
+        costo_envio:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,2})?$
+          readOnly: true
+        total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,7}(?:\.\d{0,2})?$
+          readOnly: true
+        creado:
+          type: string
+          format: date-time
+          readOnly: true
+        _links:
+          type: object
+          additionalProperties: {}
+          readOnly: true
+          title: ' links'
+      required:
+      - _links
+      - ciudad
+      - cliente
+      - codigo
+      - costo_envio
+      - creado
+      - cupon
+      - descuento
+      - direccion_envio
+      - estado
+      - id
+      - items
+      - subtotal
+      - total
+      - url
+    PedidoEstadoEnum:
+      enum:
+      - pendiente
+      - pagado
+      - enviado
+      - entregado
+      - cancelado
+      type: string
+      description: |-
+        * `pendiente` - Pendiente de pago
+        * `pagado` - Pagado
+        * `enviado` - Enviado
+        * `entregado` - Entregado
+        * `cancelado` - Cancelado
+    PedidoRequest:
+      type: object
+      properties:
+        direccion_envio:
+          type: string
+          minLength: 1
+          maxLength: 200
+        ciudad:
+          type: string
+          minLength: 1
+          maxLength: 80
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ItemPedidoRequest'
+        cupon_codigo:
+          type: string
+          writeOnly: true
+          maxLength: 30
+      required:
+      - ciudad
+      - direccion_envio
+      - items
+    Producto:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+          readOnly: true
+        id:
+          type: integer
+          readOnly: true
+        slug:
+          type: string
+          readOnly: true
+          pattern: ^[-a-zA-Z0-9_]+$
+        nombre:
+          type: string
+          maxLength: 140
+        descripcion:
+          type: string
+        precio:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+        unidad:
+          $ref: '#/components/schemas/UnidadEnum'
+        stock:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+        estado:
+          $ref: '#/components/schemas/ProductoEstadoEnum'
+        es_organico:
+          type: boolean
+        fecha_cosecha:
+          type: string
+          format: date
+          nullable: true
+        productor:
+          type: string
+          format: uri
+        productor_nombre:
+          type: string
+          readOnly: true
+        categoria:
+          type: string
+          format: uri
+        categoria_nombre:
+          type: string
+          readOnly: true
+        calificacion_promedio:
+          type: number
+          format: float
+          readOnly: true
+        num_resenas:
+          type: integer
+          readOnly: true
+        disponible:
+          type: boolean
+          readOnly: true
+        creado:
+          type: string
+          format: date-time
+          readOnly: true
+        actualizado:
+          type: string
+          format: date-time
+          readOnly: true
+        _links:
+          type: object
+          additionalProperties: {}
+          readOnly: true
+          title: ' links'
+      required:
+      - _links
+      - actualizado
+      - calificacion_promedio
+      - categoria
+      - categoria_nombre
+      - creado
+      - disponible
+      - id
+      - nombre
+      - num_resenas
+      - precio
+      - productor
+      - productor_nombre
+      - slug
+      - url
+    ProductoEstadoEnum:
+      enum:
+      - borrador
+      - activo
+      - agotado
+      - descontinuado
+      type: string
+      description: |-
+        * `borrador` - Borrador
+        * `activo` - Activo
+        * `agotado` - Agotado
+        * `descontinuado` - Descontinuado
+    ProductoRequest:
+      type: object
+      properties:
+        nombre:
+          type: string
+          minLength: 1
+          maxLength: 140
+        descripcion:
+          type: string
+        precio:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+        unidad:
+          $ref: '#/components/schemas/UnidadEnum'
+        stock:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+        estado:
+          $ref: '#/components/schemas/ProductoEstadoEnum'
+        es_organico:
+          type: boolean
+        fecha_cosecha:
+          type: string
+          format: date
+          nullable: true
+        productor:
+          type: string
+          format: uri
+        categoria:
+          type: string
+          format: uri
+      required:
+      - categoria
+      - nombre
+      - precio
+      - productor
+    Productor:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+          readOnly: true
+        id:
+          type: integer
+          readOnly: true
+        slug:
+          type: string
+          readOnly: true
+          pattern: ^[-a-zA-Z0-9_]+$
+        nombre:
+          type: string
+          maxLength: 120
+        region:
+          $ref: '#/components/schemas/RegionEnum'
+        region_display:
+          type: string
+          readOnly: true
+        distrito:
+          type: string
+          maxLength: 80
+        certificacion:
+          $ref: '#/components/schemas/CertificacionEnum'
+        certificacion_display:
+          type: string
+          readOnly: true
+        activo:
+          type: boolean
+        total_productos:
+          type: integer
+          readOnly: true
+          description: Productos activos publicados.
+        _links:
+          type: object
+          additionalProperties: {}
+          readOnly: true
+          title: ' links'
+      required:
+      - _links
+      - certificacion_display
+      - distrito
+      - id
+      - nombre
+      - region
+      - region_display
+      - slug
+      - total_productos
+      - url
+    ProductorRequest:
+      type: object
+      properties:
+        nombre:
+          type: string
+          minLength: 1
+          maxLength: 120
+        region:
+          $ref: '#/components/schemas/RegionEnum'
+        distrito:
+          type: string
+          minLength: 1
+          maxLength: 80
+        certificacion:
+          $ref: '#/components/schemas/CertificacionEnum'
+        activo:
+          type: boolean
+      required:
+      - distrito
+      - nombre
+      - region
+    RegionEnum:
+      enum:
+      - junin
+      - huancavelica
+      - pasco
+      - ayacucho
+      type: string
+      description: |-
+        * `junin` - Junín
+        * `huancavelica` - Huancavelica
+        * `pasco` - Pasco
+        * `ayacucho` - Ayacucho
+    ReponerStockRequest:
+      type: object
+      properties:
+        cantidad:
+          type: integer
+          maximum: 10000
+          minimum: 1
+      required:
+      - cantidad
+    Resena:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+          readOnly: true
+        id:
+          type: integer
+          readOnly: true
+        producto:
+          type: string
+          format: uri
+          readOnly: true
+        producto_nombre:
+          type: string
+          readOnly: true
+        autor:
+          type: string
+          title: Nombre de usuario
+          description: 'Requerido. 150 carácteres como máximo. Únicamente letras,
+            dígitos y @/./+/-/_ '
+          readOnly: true
+        puntuacion:
+          type: integer
+          maximum: 5
+          minimum: 1
+        comentario:
+          type: string
+        creado:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - autor
+      - creado
+      - id
+      - producto
+      - producto_nombre
+      - puntuacion
+      - url
+    ResenaRequest:
+      type: object
+      properties:
+        puntuacion:
+          type: integer
+          maximum: 5
+          minimum: 1
+        comentario:
+          type: string
+      required:
+      - puntuacion
+    UnidadEnum:
+      enum:
+      - kg
+      - und
+      - lt
+      - saco
+      type: string
+      description: |-
+        * `kg` - Kilogramo
+        * `und` - Unidad
+        * `lt` - Litro
+        * `saco` - Saco de 50 kg
+    ValidarCuponRequest:
+      type: object
+      properties:
+        codigo:
+          type: string
+          minLength: 1
+          maxLength: 30
+        subtotal:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,7}(?:\.\d{0,2})?$
+      required:
+      - codigo
+      - subtotal
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
