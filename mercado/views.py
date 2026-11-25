@@ -5,21 +5,23 @@ endpoints no estándar se declaran con @action (Guía, Paso 3).
 """
 from django.db import transaction
 from django.db.models import Avg, Count, Q
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import APIException
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from rest_framework.permissions import IsAdminUser, IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 
-from .models import Categoria, Producto, Productor, Resena
+from .models import Categoria, ConflictoDeEstado, Pedido, Producto, Productor, Resena
 from .permissions import AutorOStaff, ProductorDuenoOStaff, SoloLecturaOStaff
 from .serializers import (
     CategoriaSerializer,
+    PedidoSerializer,
     ProductoSerializer,
     ProductorSerializer,
     ReponerStockSerializer,
     ResenaSerializer,
+    ValidarCuponSerializer,
 )
 
 
@@ -155,3 +157,64 @@ class ResenaViewSet(
     filterset_fields = {"puntuacion": ["exact", "gte", "lte"], "producto__slug": ["exact"]}
     ordering_fields = ["creado", "puntuacion"]
     ordering = ["-creado"]
+
+
+# --------------------------------------------------------------------------
+# Pedidos
+# --------------------------------------------------------------------------
+class PedidoViewSet(
+    mixins.CreateModelMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet
+):
+    """Pedidos del cliente autenticado (el personal ve todos)."""
+
+    serializer_class = PedidoSerializer
+    permission_classes = [IsAuthenticated]   # los pedidos nunca son públicos
+    search_fields = ["ciudad", "items__producto__nombre"]
+    ordering_fields = ["creado", "total"]
+    ordering = ["-creado"]
+
+    def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):   # generación de esquema OpenAPI
+            return Pedido.objects.none()
+        qs = Pedido.objects.select_related("cliente", "cupon").prefetch_related("items__producto")
+        user = self.request.user
+        return qs if user.is_staff else qs.filter(cliente=user)
+
+    def _transicion(self, operacion):
+        pedido = self.get_object()
+        try:
+            getattr(pedido, operacion)()
+        except ConflictoDeEstado as exc:
+            raise ConflictoAPI(str(exc))
+        return Response(self.get_serializer(pedido).data)
+
+    @extend_schema(request=None, responses={200: PedidoSerializer, 409: OpenApiResponse(description="Estado inválido")})
+    @action(detail=True, methods=["post"])
+    def pagar(self, request, pk=None):
+        """Registra el pago (simulado) de un pedido pendiente."""
+        return self._transicion("pagar")
+
+    @extend_schema(request=None, responses={200: PedidoSerializer, 409: OpenApiResponse(description="Estado inválido")})
+    @action(detail=True, methods=["post"])
+    def cancelar(self, request, pk=None):
+        """Cancela un pedido pendiente/pagado y devuelve el stock reservado."""
+        return self._transicion("cancelar")
+
+    @extend_schema(request=None, responses={200: PedidoSerializer, 409: OpenApiResponse(description="Estado inválido")})
+    @action(detail=True, methods=["post"], permission_classes=[IsAdminUser])
+    def avanzar(self, request, pk=None):
+        """(Staff) pagado → enviado → entregado."""
+        return self._transicion("avanzar")
+
+    @extend_schema(request=ValidarCuponSerializer, responses={200: OpenApiResponse(description="Descuento calculado")})
+    @action(detail=False, methods=["post"], url_path="validar-cupon", url_name="validar-cupon")
+    def validar_cupon(self, request):
+        """Previsualiza el descuento de un cupón sin crear el pedido."""
+        entrada = ValidarCuponSerializer(data=request.data)
+        entrada.is_valid(raise_exception=True)
+        cupon, subtotal = entrada.validated_data["cupon"], entrada.validated_data["subtotal"]
+        descuento = cupon.descuento_para(subtotal)
+        return Response(
+            {"codigo": cupon.codigo, "porcentaje": cupon.porcentaje,
+             "descuento": f"{descuento:.2f}", "subtotal_con_descuento": f"{subtotal - descuento:.2f}"}
+        )
