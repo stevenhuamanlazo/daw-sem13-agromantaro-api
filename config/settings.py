@@ -34,6 +34,8 @@ INSTALLED_APPS = [
     "corsheaders",
     "drf_spectacular",
     "drf_spectacular_sidecar",  # Swagger UI / Redoc servidos localmente (sin CDN)
+    # Apps propias
+    "mercado",
 ]
 
 MIDDLEWARE = [
