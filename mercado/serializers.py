@@ -216,3 +216,147 @@ class ResenaSerializer(serializers.HyperlinkedModelSerializer):
                 "Solo puedes reseñar productos de pedidos que ya recibiste (estado 'entregado')."
             )
         return attrs
+
+
+# --------------------------------------------------------------------------
+# Pedidos (escritura anidada)
+# --------------------------------------------------------------------------
+class ItemPedidoSerializer(serializers.ModelSerializer):
+    producto = serializers.HyperlinkedRelatedField(
+        view_name="producto-detail", lookup_field="slug", queryset=Producto.objects.all()
+    )
+    producto_nombre = serializers.ReadOnlyField(source="producto.nombre")
+    subtotal = serializers.DecimalField(max_digits=9, decimal_places=2, read_only=True)
+
+    class Meta:
+        model = ItemPedido
+        fields = ("producto", "producto_nombre", "cantidad", "precio_unitario", "subtotal")
+        read_only_fields = ("precio_unitario",)
+
+
+class PedidoSerializer(serializers.HyperlinkedModelSerializer):
+    codigo = serializers.ReadOnlyField()
+    cliente = serializers.ReadOnlyField(source="cliente.username")
+    items = ItemPedidoSerializer(many=True)
+    cupon = serializers.SerializerMethodField()
+    cupon_codigo = serializers.CharField(write_only=True, required=False, allow_blank=True, max_length=30)
+    _links = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Pedido
+        fields = (
+            "url", "id", "codigo", "cliente", "estado", "direccion_envio", "ciudad",
+            "items", "cupon", "cupon_codigo", "subtotal", "descuento", "costo_envio",
+            "total", "creado", "_links",
+        )
+        # Los importes y el estado los calcula el servidor: el cliente nunca los dicta.
+        read_only_fields = ("estado", "subtotal", "descuento", "costo_envio", "total", "creado")
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_cupon(self, obj):
+        return obj.cupon.codigo if obj.cupon_id else None
+
+    @extend_schema_field(serializers.DictField())
+    def get__links(self, obj):
+        req = self.context.get("request")
+        enlaces = {"self": _link("pedido-detail", req, pk=obj.pk)}
+        if obj.puede_pagar():
+            enlaces["pagar"] = _link("pedido-pagar", req, "POST", pk=obj.pk)
+        if obj.puede_cancelar():
+            enlaces["cancelar"] = _link("pedido-cancelar", req, "POST", pk=obj.pk)
+        return enlaces
+
+    # -- Validación anidada --------------------------------------------------
+    def validate(self, attrs):
+        items = attrs.get("items") or []
+        if not items:
+            raise serializers.ValidationError({"items": "El pedido debe incluir al menos un producto."})
+        if len(items) > 25:
+            raise serializers.ValidationError({"items": "Máximo 25 productos distintos por pedido."})
+
+        errores, vistos, subtotal = [], set(), Decimal("0.00")
+        for item in items:
+            producto, cantidad = item["producto"], item["cantidad"]
+            if producto.pk in vistos:
+                errores.append(f"'{producto.nombre}' está repetido; sume las cantidades en un solo ítem.")
+                continue
+            vistos.add(producto.pk)
+            if producto.estado != Producto.Estado.ACTIVO:
+                errores.append(f"'{producto.nombre}' no está disponible ({producto.get_estado_display().lower()}).")
+            elif cantidad > producto.stock:
+                errores.append(
+                    f"Stock insuficiente de '{producto.nombre}': solicitado {cantidad}, disponible {producto.stock}."
+                )
+            subtotal += producto.precio * cantidad
+        if errores:
+            raise serializers.ValidationError({"items": errores})
+
+        codigo = (attrs.pop("cupon_codigo", "") or "").strip().upper()
+        if codigo:
+            try:
+                cupon = Cupon.objects.get(codigo=codigo)
+            except Cupon.DoesNotExist:
+                raise serializers.ValidationError({"cupon_codigo": "El cupón no existe."})
+            motivo = cupon.motivo_invalido(subtotal, timezone.localdate())
+            if motivo:
+                raise serializers.ValidationError({"cupon_codigo": motivo})
+            attrs["_cupon"] = cupon
+        return attrs
+
+    # -- Escritura transaccional --------------------------------------------
+    @transaction.atomic
+    def create(self, validated_data):
+        items = validated_data.pop("items")
+        cupon = validated_data.pop("_cupon", None)
+        cliente = self.context["request"].user
+
+        # Bloqueo de filas: evita vender dos veces el último lote (condición de carrera).
+        bloqueados = {
+            p.pk: p
+            for p in Producto.objects.select_for_update().filter(pk__in=[i["producto"].pk for i in items])
+        }
+        for item in items:
+            p = bloqueados[item["producto"].pk]
+            if p.estado != Producto.Estado.ACTIVO or item["cantidad"] > p.stock:
+                raise serializers.ValidationError(
+                    {"items": [f"El stock de '{p.nombre}' cambió mientras se procesaba el pedido."]}
+                )
+
+        pedido = Pedido.objects.create(cliente=cliente, cupon=cupon, **validated_data)
+        subtotal = Decimal("0.00")
+        for item in items:
+            p = bloqueados[item["producto"].pk]
+            ItemPedido.objects.create(
+                pedido=pedido, producto=p, cantidad=item["cantidad"], precio_unitario=p.precio
+            )
+            subtotal += p.precio * item["cantidad"]
+            p.stock -= item["cantidad"]
+            if p.stock == 0:
+                p.estado = Producto.Estado.AGOTADO
+            p.save(update_fields=["stock", "estado", "actualizado"])
+
+        descuento = cupon.descuento_para(subtotal) if cupon else Decimal("0.00")
+        neto = subtotal - descuento
+        envio = Decimal("0.00") if neto >= Pedido.ENVIO_GRATIS_DESDE else Pedido.COSTO_ENVIO
+        pedido.subtotal, pedido.descuento, pedido.costo_envio = subtotal, descuento, envio
+        pedido.total = neto + envio
+        pedido.save(update_fields=["subtotal", "descuento", "costo_envio", "total", "actualizado"])
+        if cupon:
+            Cupon.objects.filter(pk=cupon.pk).update(usos_actuales=F("usos_actuales") + 1)
+        return pedido
+
+
+class ValidarCuponSerializer(serializers.Serializer):
+    codigo = serializers.CharField(max_length=30)
+    subtotal = serializers.DecimalField(max_digits=9, decimal_places=2, min_value=Decimal("0.01"))
+
+    def validate(self, attrs):
+        try:
+            cupon = Cupon.objects.get(codigo=attrs["codigo"].strip().upper())
+        except Cupon.DoesNotExist:
+            raise serializers.ValidationError({"codigo": "El cupón no existe."})
+        motivo = cupon.motivo_invalido(attrs["subtotal"], timezone.localdate())
+        if motivo:
+            raise serializers.ValidationError({"codigo": motivo})
+        attrs["cupon"] = cupon
+        return attrs
