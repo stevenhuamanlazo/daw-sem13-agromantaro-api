@@ -143,6 +143,18 @@ CORS_URLS_REGEX = r"^/api/.*$"   # solo la API es accesible cross-origin
 CORS_ALLOW_CREDENTIALS = True    # necesario para enviar la cookie de sesión
 
 # --------------------------------------------------------------------------
+# CSRF – obligatorio porque se usa autenticación por sesión (SPA/AJAX)
+# --------------------------------------------------------------------------
+CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS          # el SPA puede enviar POST con cookie
+CSRF_COOKIE_HTTPONLY = False                         # el JS del SPA debe poder leer el token
+CSRF_COOKIE_SAMESITE = "Lax"
+CSRF_FAILURE_VIEW = "mercado.seguridad.csrf_fallo"   # 403 en JSON en vez de HTML
+CORS_ALLOW_HEADERS = (
+    "accept", "authorization", "content-type", "origin", "user-agent",
+    "x-csrftoken", "x-requested-with",
+)
+
+# --------------------------------------------------------------------------
 # OpenAPI / Swagger (drf-spectacular)
 # --------------------------------------------------------------------------
 SPECTACULAR_SETTINGS = {

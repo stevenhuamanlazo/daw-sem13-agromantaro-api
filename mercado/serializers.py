@@ -235,7 +235,7 @@ class ItemPedidoSerializer(serializers.ModelSerializer):
 
 
 class PedidoSerializer(serializers.HyperlinkedModelSerializer):
-    codigo = serializers.ReadOnlyField()
+    codigo = serializers.CharField(read_only=True)
     cliente = serializers.ReadOnlyField(source="cliente.username")
     items = ItemPedidoSerializer(many=True)
     cupon = serializers.SerializerMethodField()
